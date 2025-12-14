@@ -26,22 +26,18 @@ import {
 
 const isDark = ref(false);
 
-function applyTheme(dark: boolean) {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-}
+// beim Start: aus localStorage oder default false
+const saved = localStorage.getItem("theme");
+isDark.value = saved === "dark";
 
-onMounted(() => {
-    const saved = localStorage.getItem("theme");
-    const prefersDark =
-        window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-
-    const startDark = saved ? saved === "dark" : prefersDark;
-    isDark.value = startDark;
-    applyTheme(startDark);
-});
-
-watch(isDark, (v) => applyTheme(v));
+watch(
+    isDark,
+    (v) => {
+        document.documentElement.classList.toggle("dark", v);
+        localStorage.setItem("theme", v ? "dark" : "light");
+    },
+    { immediate: true },
+);
 
 // ------- helpers (DE-kompatibel: Komma als Dezimaltrenner) -------
 function parseNumberDE(raw: string): number | null {

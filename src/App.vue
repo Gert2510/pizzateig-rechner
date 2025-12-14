@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { calcDough, type PoolishMode } from "@/lib/dough";
 
 import { Button } from "@/components/ui/button";

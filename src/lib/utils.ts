@@ -1,16 +1,16 @@
-import type { Updater } from "@tanstack/vue-table"
-import type { ClassValue } from "clsx"
-import type { Ref } from "vue"
-import { clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-export function valueUpdater<T extends Updater<any>>(updaterOrValue: T, ref: Ref) {
-  ref.value
-    = typeof updaterOrValue === "function"
-      ? updaterOrValue(ref.value)
-      : updaterOrValue
+// Ersatz für @tanstack/vue-table Updater
+export type Updater<T> = T | ((old: T) => T);
+
+export function valueUpdater<T>(updaterOrValue: Updater<T>, ref: { value: T }) {
+  ref.value =
+    typeof updaterOrValue === "function"
+      ? (updaterOrValue as (old: T) => T)(ref.value)
+      : updaterOrValue;
 }

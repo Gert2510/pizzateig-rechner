@@ -180,7 +180,7 @@ function setPoolishPreset(flour: number) {
                 <div>
                     <h1 class="text-2xl font-semibold">Pizzateig Rechner</h1>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Make perfect pizza dough.
+                        Make the perfect pizza dough.
                     </p>
                 </div>
 

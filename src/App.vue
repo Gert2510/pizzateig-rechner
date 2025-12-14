@@ -196,7 +196,7 @@ const instructionsText = computed(() => {
 2) ${fmt(poolish.yeastG)} ${yeastKindLabel.value} darin auflösen
 3) ${fmt(poolish.honeyG)} Honig einrühren
 4) ${fmt(poolish.flourG)} Mehl dazu, umrühren
-5) Zudecken (Frischhaltefolie), oben mit einer Gabel ein paar kleine Löcher rein
+5) Zudecken (Frischhaltefolie), oben mit einer Gabel ein paar kleine Löcher machen
 6) Mindestens 16 Stunden in den Kühlschrank`
         : `Poolish ist ausgeschaltet.`;
 
@@ -204,10 +204,10 @@ const instructionsText = computed(() => {
 ${poolishLine}
 
 Nächster Tag / Hauptteig:
-1) Poolish in die Küchenmaschine
+1) Poolish in die Küchenmaschine und einschalten
 2) ${fmt(r.finalMix.waterG)} Wasser dazu
 3) ${fmt(r.finalMix.flourG)} Mehl dazu
-4) Dann ${fmt(r.finalMix.saltG)} Salz dazu
+4) Dann ${fmt(r.finalMix.saltG)} zum Schluß Salz dazu
 5) Verrühren/kneten bis ein glatter Teig entsteht
 
 Formen & Gehen:
@@ -234,7 +234,7 @@ Belag:
 - Mozzarella
   (Tipp: gut abtropfen lassen, erst in Scheiben, dann Streifen, dann Stücke schneiden)
 - Basilikum
-- Ein bissl Olivenöl`;
+- Olivenöl`;
 });
 
 const fullSheetText = computed(() => {
@@ -257,8 +257,7 @@ function printSheet() {
                 <div>
                     <h1 class="text-2xl font-semibold">Pizzateig Rechner</h1>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Salz fix (45 g / 1000 ml Wasser). Poolish: Honig fix 5
-                        g. Germ nur im Poolish.
+                        Der perfekte neapolitanische Pizzateig.
                     </p>
                 </div>
 
@@ -345,29 +344,11 @@ function printSheet() {
                 <CardHeader>
                     <CardTitle>Poolish</CardTitle>
                     <CardDescription
-                        >Optionaler Vorteig (Honig fix 5 g)</CardDescription
+                        >Vorteig</CardDescription
                     >
                 </CardHeader>
                 <CardContent class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="space-y-1">
-                            <div class="text-sm font-medium">
-                                Poolish verwenden
-                            </div>
-                            <div class="text-xs text-muted-foreground">
-                                An/aus
-                            </div>
-                        </div>
-                        <Switch v-model:checked="usePoolish" />
-                    </div>
 
-                    <div
-                        :class="
-                            usePoolish
-                                ? 'space-y-4'
-                                : 'space-y-4 opacity-50 pointer-events-none'
-                        "
-                    >
                         <div class="space-y-2">
                             <Label>Poolish Hydration</Label>
                             <Select v-model="poolishHydSelect">

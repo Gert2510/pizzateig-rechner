@@ -180,8 +180,7 @@ function setPoolishPreset(flour: number) {
                 <div>
                     <h1 class="text-2xl font-semibold">Pizzateig Rechner</h1>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Salz ist fix (45 g / 1000 ml Wasser). Germ nur im
-                        Poolish (g). Honig fix 5 g im Poolish.
+                        Make perfect pizza dough.
                     </p>
                 </div>
 

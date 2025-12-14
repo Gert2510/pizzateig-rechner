@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, nextTick, onMounted } from "vue";
 import { calcDough, type PoolishMode } from "@/lib/dough";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,14 @@ const hydrationPct = ref<number>(65);
 
 // Poolish
 const usePoolish = ref<boolean>(true);
+
+onMounted(() => {
+    nextTick(() => {
+        // Trigger ein Update des Switch Components
+        usePoolish.value = usePoolish.value;
+    });
+});
+
 const poolishMode = ref<PoolishMode>("fixed");
 
 const poolishPercentText = ref("50");
@@ -80,7 +88,7 @@ const poolishFlourFixedText = ref("300");
 const poolishHydrationPct = ref<number>(100);
 
 // Germ nur im Poolish (Gramm)
-const poolishYeastText = ref("0,3");
+const poolishYeastText = ref("3");
 
 // Trocken vs Frisch
 const freshYeast = ref(false); // false = Trocken, true = Frisch
@@ -343,7 +351,7 @@ function printSheet() {
             <Card class="print:hidden">
                 <CardHeader>
                     <CardTitle>Poolish</CardTitle>
-                    <CardDescription>Vorteig </CardDescription>
+                    <CardDescription>Vorteig - Empfohlen</CardDescription>
                 </CardHeader>
                 <CardContent class="space-y-4">
                     <div class="flex items-center justify-between">
@@ -451,7 +459,8 @@ function printSheet() {
                             <div class="space-y-1">
                                 <div class="text-sm font-medium">Germ-Art</div>
                                 <div class="text-xs text-muted-foreground">
-                                    Trocken ↔ Frisch (Umrechnung 1:3)
+                                    Trocken ↔ Frisch <br />
+                                    (Umrechnung 1:3)
                                 </div>
                             </div>
 

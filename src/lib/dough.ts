@@ -103,10 +103,13 @@ export function calcDough(i: DoughInputs): DoughResult {
   const maxPoolishFlourByWater = water / poolishHyd;
   let note: string | undefined;
 
+  const requestedPoolishFlour = poolishFlour;
+
   if (poolishFlour > maxPoolishFlourByWater) {
     poolishFlour = maxPoolishFlourByWater;
     note =
-      "Poolish begrenzt, damit Final-Wasser nicht negativ wird (Hydration zu niedrig/Poolish zu groß).";
+      `Poolish begrenzt: gewünscht ${round1(requestedPoolishFlour)} g Poolish-Mehl, ` +
+      `möglich max ${round1(poolishFlour)} g (sonst wird Final-Wasser negativ).`;
   }
 
   const poolishWater = poolishFlour * poolishHyd;

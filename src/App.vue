@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onMounted } from "vue";
+import { computed, ref, watch, watchEffect } from "vue";
 import { calcDough, type PoolishMode } from "@/lib/dough";
 
 import { Button } from "@/components/ui/button";
@@ -73,13 +73,6 @@ const hydrationPct = ref<number>(65);
 
 // Poolish
 const usePoolish = ref<boolean>(true);
-
-onMounted(() => {
-    nextTick(() => {
-        // Trigger ein Update des Switch Components
-        usePoolish.value = usePoolish.value;
-    });
-});
 
 const poolishMode = ref<PoolishMode>("fixed");
 
@@ -156,11 +149,134 @@ const result = computed(() =>
     }),
 );
 
+// --- Poolish: Guard gegen "300/300 bei kleinem Teig" ---
+const autoClampPoolish = ref(true);
+const poolishClampInfo = ref<null | { from: number; to: number }>(null);
+
+// Empfehlung Neapolitan:
+const POOLISH_PCT_RECOMMENDED = 35; // Zielwert beim "% umstellen"
+const POOLISH_PCT_CAP = 40; // niemals höher setzen
+const MIN_FINAL_WATER_G = 30; // praxisnah: im Final soll etwas Wasser übrig bleiben
+
+// Gesamtwasser / Gesamtmehl aus dem Ergebnis:
+const totalWaterG = computed(() => result.value.waterG);
+const totalFlourG = computed(() => result.value.flourG);
+
+// Poolish-Hydration als Faktor (100% => 1.0)
+const poolishHydFactor = computed(() => poolishHydrationPct.value / 100);
+
+// Technisches Maximum: Final-Wasser darf nicht negativ werden
+const poolishMaxFlourHardG = computed(() => {
+    const byWater = totalWaterG.value / poolishHydFactor.value;
+    return Math.max(0, Math.min(totalFlourG.value, byWater));
+});
+
+// Praxis-Maximum: cap bei 40% UND im Final bleiben mind. MIN_FINAL_WATER_G Wasser
+const poolishMaxFlourG = computed(() => {
+    const capByPct = totalFlourG.value * (POOLISH_PCT_CAP / 100);
+
+    const byFinalWater =
+        (totalWaterG.value - MIN_FINAL_WATER_G) / poolishHydFactor.value;
+
+    return Math.max(
+        0,
+        Math.min(poolishMaxFlourHardG.value, capByPct, byFinalWater),
+    );
+});
+
+const poolishMaxPctHard = computed(() => {
+    if (totalFlourG.value <= 0) return 0;
+    return (poolishMaxFlourHardG.value / totalFlourG.value) * 100;
+});
+
+const requestedPoolishFlourFixedG = computed(
+    () => parseNumberDE(poolishFlourFixedText.value) ?? 0,
+);
+
+const predictedFinalWaterIfRequested = computed(() => {
+    const poolishWater =
+        requestedPoolishFlourFixedG.value * poolishHydFactor.value;
+    return totalWaterG.value - poolishWater;
+});
+
+const poolishTooBigFixed = computed(() => {
+    if (!usePoolish.value) return false;
+    if (poolishMode.value !== "fixed") return false;
+    if (parseNumberDE(poolishFlourFixedText.value) === null) return false;
+    return requestedPoolishFlourFixedG.value > poolishMaxFlourG.value + 0.05;
+});
+
+const finalWaterVeryLow = computed(() => {
+    return usePoolish.value && result.value.finalMix.waterG < MIN_FINAL_WATER_G;
+});
+
+function setPoolishToMax() {
+    const to = Math.floor(poolishMaxFlourG.value);
+    const safeTo = Math.max(0, to);
+    poolishFlourFixedText.value = String(safeTo);
+    return safeTo;
+}
+
+function switchToPercentThatFits() {
+    const maxPct =
+        totalFlourG.value > 0
+            ? (poolishMaxFlourG.value / totalFlourG.value) * 100
+            : 0;
+    const pct =
+        maxPct >= POOLISH_PCT_RECOMMENDED ? POOLISH_PCT_RECOMMENDED : maxPct;
+
+    poolishMode.value = "percent";
+    poolishPercentText.value = formatNumberDE(
+        Math.max(0, Math.min(POOLISH_PCT_CAP, pct)),
+        1,
+    );
+}
+
+// Optional: automatische Begrenzung (verhindert “Preset = zu groß”)
+watchEffect(() => {
+    if (!autoClampPoolish.value) return;
+    if (!usePoolish.value) return;
+    if (poolishMode.value !== "fixed") return;
+
+    const v = parseNumberDE(poolishFlourFixedText.value);
+    if (v === null) return;
+
+    if (v > poolishMaxFlourG.value + 0.05) {
+        const from = v;
+        const to = setPoolishToMax();
+        poolishClampInfo.value = { from, to };
+    }
+});
+
+watch([usePoolish, poolishMode], () => {
+    if (!usePoolish.value || poolishMode.value !== "fixed") {
+        poolishClampInfo.value = null;
+    }
+});
+
+watch(poolishFlourFixedText, () => {
+    const v = parseNumberDE(poolishFlourFixedText.value);
+    if (v === null) return;
+    if (
+        poolishClampInfo.value &&
+        Math.abs(v - poolishClampInfo.value.to) > 0.05
+    ) {
+        poolishClampInfo.value = null;
+    }
+});
+
 function setPoolishPreset(flour: number) {
     usePoolish.value = true;
     poolishMode.value = "fixed";
     poolishHydrationPct.value = 100;
+
+    // wenn 300/300 nicht möglich ist: auf max setzen (oder du rufst switchToPercentThatFits())
     poolishFlourFixedText.value = String(flour);
+
+    if (autoClampPoolish.value) {
+        const v = parseNumberDE(poolishFlourFixedText.value) ?? flour;
+        if (v > poolishMaxFlourG.value + 0.05) setPoolishToMax();
+    }
 }
 
 // ---------- Küchenzettel Text ----------
@@ -409,6 +525,115 @@ function printSheet() {
                                 inputmode="numeric"
                                 placeholder="z.B. 300"
                             ></Input>
+
+                            <div
+                                v-if="
+                                    poolishTooBigFixed ||
+                                    finalWaterVeryLow ||
+                                    poolishClampInfo
+                                "
+                                class="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <div class="font-medium">
+                                        Poolish Hinweis
+                                    </div>
+
+                                    <!-- OK-Button zum Wegklicken -->
+                                    <Button
+                                        variant="ghost"
+                                        class="h-7 px-2 text-xs"
+                                        @click="poolishClampInfo = null"
+                                        v-if="poolishClampInfo"
+                                    >
+                                        OK
+                                    </Button>
+                                </div>
+
+                                <div class="mt-1 space-y-1 text-xs opacity-90">
+                                    <div v-if="poolishClampInfo">
+                                        Auto begrenzt:
+                                        <span class="font-semibold"
+                                            >{{
+                                                poolishClampInfo.from.toFixed(1)
+                                            }}
+                                            g</span
+                                        >
+                                        →
+                                        <span class="font-semibold"
+                                            >{{
+                                                poolishClampInfo.to.toFixed(1)
+                                            }}
+                                            g</span
+                                        >
+                                        (damit der Hauptteig noch Wasser zum
+                                        Kneten hat).
+                                    </div>
+
+                                    <div>
+                                        Empfohlenes Maximum bei
+                                        {{ poolishHydrationPct }}%
+                                        Poolish-Hydration:
+                                        <span class="font-semibold"
+                                            >{{
+                                                poolishMaxFlourG.toFixed(1)
+                                            }}
+                                            g</span
+                                        >
+                                        (≤ 40% vom Gesamtmehl, Final-Wasser ≥ 30
+                                        g).
+                                    </div>
+
+                                    <div>
+                                        Du hast
+                                        <span class="font-semibold"
+                                            >{{
+                                                requestedPoolishFlourFixedG.toFixed(
+                                                    1,
+                                                )
+                                            }}
+                                            g</span
+                                        >
+                                        gewählt → Final-Wasser wäre
+                                        <span class="font-semibold"
+                                            >{{
+                                                predictedFinalWaterIfRequested.toFixed(
+                                                    1,
+                                                )
+                                            }}
+                                            g</span
+                                        >.
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="mt-3 flex flex-wrap items-center gap-2"
+                                >
+                                    <Button
+                                        variant="secondary"
+                                        @click="setPoolishToMax"
+                                        >Auf Max setzen</Button
+                                    >
+                                    <Button
+                                        variant="secondary"
+                                        @click="switchToPercentThatFits"
+                                        >Auf % umstellen</Button
+                                    >
+
+                                    <div
+                                        class="ml-auto flex items-center gap-2"
+                                    >
+                                        <span class="text-xs opacity-80"
+                                            >Auto begrenzen</span
+                                        >
+                                        <Switch
+                                            v-model:checked="autoClampPoolish"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="flex flex-wrap gap-2">
                                 <Button

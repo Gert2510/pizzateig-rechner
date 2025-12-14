@@ -95,6 +95,17 @@
 
     /* ein bisschen Rand fürs Papier */
     @page {
-        margin: 14mm;
+        size: A4;
+        margin: 10mm;
+    }
+
+    #print-area {
+        column-count: 2;
+        column-gap: 10mm;
+        column-fill: auto;
+
+        font-size: 10pt; /* ggf. 9pt */
+        line-height: 1.15; /* ggf. 1.1 */
+        white-space: pre-line; /* Zeilenumbrüche behalten, aber besserer Flow */
     }
 }

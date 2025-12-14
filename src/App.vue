@@ -196,53 +196,39 @@ ${r.finalMix.note ? `Hinweis: ${r.finalMix.note}\n` : ""}`.trim();
 
 const instructionsText = computed(() => {
     const r = result.value;
-    const poolish = r.poolish;
+    const p = r.poolish;
 
-    const poolishLine = poolish
-        ? `Poolish anrühren:
-1) ${fmt(poolish.waterG)} Wasser
-2) ${fmt(poolish.yeastG)} ${yeastKindLabel.value} darin auflösen
-3) ${fmt(poolish.honeyG)} Honig einrühren
-4) ${fmt(poolish.flourG)} Mehl dazu, umrühren
-5) Zudecken (Frischhaltefolie), oben mit einer Gabel ein paar kleine Löcher machen
-6) Mindestens 16 Stunden in den Kühlschrank`
-        : `Poolish ist ausgeschaltet.`;
+    const poolishLine = p
+        ? `POOLISH:
+1) Wasser (${fmt(p.waterG)})
+2) Germ auflösen (${fmt(p.yeastG)} ${yeastKindLabel.value})
+3) Honig einrühren (${fmt(p.honeyG)})
+4) Mehl dazu (${fmt(p.flourG)}), umrühren
+5) Folie drauf, mit Gabel Löcher rein
+6) mind. 16h Kühlschrank`
+        : `POOLISH: aus`;
 
     return `ANLEITUNG
 ${poolishLine}
 
-Nächster Tag / Hauptteig:
-1) Poolish in die Küchenmaschine und einschalten
-2) ${fmt(r.finalMix.waterG)} Wasser dazu
-3) ${fmt(r.finalMix.flourG)} Mehl dazu
-4) Dann ${fmt(r.finalMix.saltG)} zum Schluß Salz dazu
-5) Verrühren/kneten bis ein glatter Teig entsteht
+HAUPTTEIG:
+1) Poolish in Maschine
+2) Rest-Wasser (${fmt(r.finalMix.waterG)})
+3) Rest-Mehl (${fmt(r.finalMix.flourG)})
+4) Salz (${fmt(r.finalMix.saltG)}) dazu
+5) Kneten bis glatt
 
-Formen & Gehen:
-1) Teig falten, kurz formen
-2) 15 Minuten rasten lassen
-3) Nochmal zu einer schönen Kugel formen
-4) 1 Stunde zugedeckt rasten lassen
-5) Portionieren: ${ballsN.value} Teiglinge à ${ballWeightG.value} g
-6) In eine Teigbox geben und mindestens 2 Stunden zugedeckt gehen lassen
-
-Dann viel Spaß beim Pizza machen!`;
+FORMEN/GEHEN:
+- Falten, formen, 15 min rasten
+- Nochmal Kugel formen, 1h zugedeckt rasten lassen
+- Portionieren: ${ballsN.value} × ${ballWeightG.value} g
+- in Gefäß (Pizzabox), mind. 2h zugedeckt gehen lassen`;
 });
 
 const toppingsText = computed(() => {
-    return `NEAPOLITANISCHE ZUTATEN (klassisch)
-Tomatensoße:
-- Ganze Tomaten
-- Salz
-- Olivenöl
-- Basilikum
-
-Belag:
-- Parmesan
-- Mozzarella
-  (Tipp: gut abtropfen lassen, erst in Scheiben, dann Streifen, dann Stücke schneiden)
-- Basilikum
-- Olivenöl`;
+    return `NEAPOLITANISCH (klassisch)
+Sauce: ganze Tomaten + Salz + Olivenöl + Basilikum
+Belag: Parmesan + Mozzarella (abtropfen, schneiden) + Basilikum + Olivenöl`;
 });
 
 const fullSheetText = computed(() => {
@@ -504,7 +490,7 @@ function printSheet() {
                 <CardContent class="space-y-3">
                     <div
                         id="print-area"
-                        class="whitespace-pre-wrap rounded-md border bg-muted p-4 font-mono text-sm print:border-0 print:bg-transparent print:p-0"
+                        class="whitespace-pre-line rounded-md border bg-muted p-4 font-mono text-sm print:border-0 print:bg-transparent print:p-0"
                     >
                         {{ fullSheetText }}
                     </div>

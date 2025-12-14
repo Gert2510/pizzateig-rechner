@@ -62,18 +62,17 @@ watch(
     { immediate: true },
 );
 
-// ---------- Inputs (Strings, damit tippen funktioniert) ----------
-const ballsText = ref("2");
+// ---------- Inputs ----------
+const ballsText = ref("4");
 
 const ballWeightOptions = [200, 230, 250, 270, 280, 300, 320, 350];
-const ballWeightG = ref<number>(250);
+const ballWeightG = ref<number>(280);
 
 const hydrationOptions = [55, 58, 60, 62, 65, 68, 70, 72, 75];
 const hydrationPct = ref<number>(65);
 
 // Poolish
 const usePoolish = ref<boolean>(true);
-
 const poolishMode = ref<PoolishMode>("fixed");
 
 const poolishPercentText = ref("50");
@@ -108,14 +107,6 @@ const ballsN = computed(() => {
     return Math.min(100, Math.max(1, v));
 });
 
-const poolishPercentN = computed(() => numOr(poolishPercentText.value, 50));
-const poolishFlourFixedN = computed(() =>
-    numOr(poolishFlourFixedText.value, 300),
-);
-const poolishYeastN = computed(() =>
-    Math.max(0, numOr(poolishYeastText.value, 0)),
-);
-
 // shadcn Select: string values
 const ballWeightSelect = computed({
     get: () => String(ballWeightG.value),
@@ -134,6 +125,14 @@ const poolishModeSelect = computed({
     set: (v: string) => (poolishMode.value = v as PoolishMode),
 });
 
+const poolishFlourFixedN = computed(() =>
+    numOr(poolishFlourFixedText.value, 300),
+);
+const poolishYeastN = computed(() =>
+    Math.max(0, numOr(poolishYeastText.value, 0)),
+);
+
+// ---------- result (wird für Guards gebraucht) ----------
 const result = computed(() =>
     calcDough({
         balls: ballsN.value,
@@ -142,7 +141,7 @@ const result = computed(() =>
 
         usePoolish: usePoolish.value,
         poolishMode: poolishMode.value,
-        poolishPercent: poolishPercentN.value,
+        poolishPercent: 0, // wird unten über poolishPercentN gesetzt
         poolishFlourFixedG: poolishFlourFixedN.value,
         poolishHydrationPct: poolishHydrationPct.value,
         poolishYeastG: usePoolish.value ? poolishYeastN.value : 0,
@@ -156,25 +155,23 @@ const poolishClampInfo = ref<null | { from: number; to: number }>(null);
 // Empfehlung Neapolitan:
 const POOLISH_PCT_RECOMMENDED = 35; // Zielwert beim "% umstellen"
 const POOLISH_PCT_CAP = 40; // niemals höher setzen
-const MIN_FINAL_WATER_G = 30; // praxisnah: im Final soll etwas Wasser übrig bleiben
+const MIN_FINAL_WATER_G = 30; // im Final soll Wasser übrig bleiben
 
-// Gesamtwasser / Gesamtmehl aus dem Ergebnis:
 const totalWaterG = computed(() => result.value.waterG);
 const totalFlourG = computed(() => result.value.flourG);
 
-// Poolish-Hydration als Faktor (100% => 1.0)
+// Poolish-Hydration als Faktor
 const poolishHydFactor = computed(() => poolishHydrationPct.value / 100);
 
-// Technisches Maximum: Final-Wasser darf nicht negativ werden
+// Technisches Maximum (Final-Wasser nicht negativ)
 const poolishMaxFlourHardG = computed(() => {
     const byWater = totalWaterG.value / poolishHydFactor.value;
     return Math.max(0, Math.min(totalFlourG.value, byWater));
 });
 
-// Praxis-Maximum: cap bei 40% UND im Final bleiben mind. MIN_FINAL_WATER_G Wasser
+// Praxis-Maximum: cap 40% + Mindest-Finalwasser
 const poolishMaxFlourG = computed(() => {
     const capByPct = totalFlourG.value * (POOLISH_PCT_CAP / 100);
-
     const byFinalWater =
         (totalWaterG.value - MIN_FINAL_WATER_G) / poolishHydFactor.value;
 
@@ -184,9 +181,11 @@ const poolishMaxFlourG = computed(() => {
     );
 });
 
-const poolishMaxPctHard = computed(() => {
+const poolishPercentCap = computed(() => {
     if (totalFlourG.value <= 0) return 0;
-    return (poolishMaxFlourHardG.value / totalFlourG.value) * 100;
+    const recommendedMaxPct =
+        (poolishMaxFlourG.value / totalFlourG.value) * 100;
+    return Math.max(0, Math.min(POOLISH_PCT_CAP, recommendedMaxPct));
 });
 
 const requestedPoolishFlourFixedG = computed(
@@ -218,21 +217,15 @@ function setPoolishToMax() {
 }
 
 function switchToPercentThatFits() {
-    const maxPct =
-        totalFlourG.value > 0
-            ? (poolishMaxFlourG.value / totalFlourG.value) * 100
-            : 0;
+    const maxPct = poolishPercentCap.value;
     const pct =
         maxPct >= POOLISH_PCT_RECOMMENDED ? POOLISH_PCT_RECOMMENDED : maxPct;
 
     poolishMode.value = "percent";
-    poolishPercentText.value = formatNumberDE(
-        Math.max(0, Math.min(POOLISH_PCT_CAP, pct)),
-        1,
-    );
+    poolishPercentText.value = formatNumberDE(pct, 1);
 }
 
-// Optional: automatische Begrenzung (verhindert “Preset = zu groß”)
+// Optional: automatische Begrenzung bei FIXED
 watchEffect(() => {
     if (!autoClampPoolish.value) return;
     if (!usePoolish.value) return;
@@ -265,12 +258,71 @@ watch(poolishFlourFixedText, () => {
     }
 });
 
+// ---- Percent input clamp (nur bei blur) ----
+const poolishPercentEditing = ref(false);
+
+function clampPoolishPercentNow() {
+    if (!usePoolish.value) return;
+    if (poolishMode.value !== "percent") return;
+
+    const v = parseNumberDE(poolishPercentText.value);
+    if (v === null) {
+        const fallback =
+            poolishPercentCap.value >= POOLISH_PCT_RECOMMENDED
+                ? POOLISH_PCT_RECOMMENDED
+                : poolishPercentCap.value;
+        poolishPercentText.value = formatNumberDE(fallback, 1);
+        return;
+    }
+
+    const clamped = Math.max(0, Math.min(poolishPercentCap.value, v));
+    poolishPercentText.value = formatNumberDE(clamped, 1);
+}
+
+watch(
+    [
+        () => ballsText.value,
+        () => ballWeightG.value,
+        () => hydrationPct.value,
+        () => poolishHydrationPct.value,
+        () => usePoolish.value,
+        () => poolishMode.value,
+    ],
+    () => {
+        if (poolishPercentEditing.value) return;
+        clampPoolishPercentNow();
+    },
+);
+
+// poolishPercentN (berechnungssicher)
+const poolishPercentN = computed(() => {
+    const v = numOr(poolishPercentText.value, 50);
+    return Math.max(0, Math.min(poolishPercentCap.value, v));
+});
+
+// ---------- recompute result with correct poolishPercent ----------
+const result2 = computed(() =>
+    calcDough({
+        balls: ballsN.value,
+        ballWeightG: ballWeightG.value,
+        hydrationPct: hydrationPct.value,
+
+        usePoolish: usePoolish.value,
+        poolishMode: poolishMode.value,
+        poolishPercent: poolishPercentN.value,
+        poolishFlourFixedG: poolishFlourFixedN.value,
+        poolishHydrationPct: poolishHydrationPct.value,
+        poolishYeastG: usePoolish.value ? poolishYeastN.value : 0,
+    }),
+);
+
+// use result2 everywhere below
+const activeResult = result2;
+
 function setPoolishPreset(flour: number) {
     usePoolish.value = true;
     poolishMode.value = "fixed";
     poolishHydrationPct.value = 100;
-
-    // wenn 300/300 nicht möglich ist: auf max setzen (oder du rufst switchToPercentThatFits())
     poolishFlourFixedText.value = String(flour);
 
     if (autoClampPoolish.value) {
@@ -281,7 +333,7 @@ function setPoolishPreset(flour: number) {
 
 // ---------- Küchenzettel Text ----------
 const recipeText = computed(() => {
-    const r = result.value;
+    const r = activeResult.value;
 
     const poolishBlock = r.poolish
         ? `POOLISH (${r.poolish.hydrationPct}%)
@@ -293,6 +345,7 @@ ${r.poolish.note ? `Hinweis: ${r.poolish.note}\n` : ""}`
         : `POOLISH: aus\n`;
 
     return `PIZZATEIG REZEPT (Küchenzettel)
+
 Teiglinge: ${ballsN.value} × ${ballWeightG.value} g = ${fmt(r.totalDoughG)}
 Hydration: ${hydrationPct.value}%
 ${r.saltRule}
@@ -311,7 +364,7 @@ ${r.finalMix.note ? `Hinweis: ${r.finalMix.note}\n` : ""}`.trim();
 });
 
 const instructionsText = computed(() => {
-    const r = result.value;
+    const r = activeResult.value;
     const p = r.poolish;
 
     const poolishLine = p
@@ -342,7 +395,7 @@ FORMEN/GEHEN:
 });
 
 const toppingsText = computed(() => {
-    return `NEAPOLITANISCH (klassisch)
+    return `Zutaten Pizza Margherita
 Sauce: ganze Tomaten + Salz + Olivenöl + Basilikum
 Belag: Parmesan + Mozzarella (abtropfen, schneiden) + Basilikum + Olivenöl`;
 });
@@ -541,7 +594,6 @@ function printSheet() {
                                         Poolish Hinweis
                                     </div>
 
-                                    <!-- OK-Button zum Wegklicken -->
                                     <Button
                                         variant="ghost"
                                         class="h-7 px-2 text-xs"
@@ -660,8 +712,17 @@ function printSheet() {
                                 v-model="poolishPercentText"
                                 type="text"
                                 inputmode="numeric"
-                                placeholder="z.B. 50"
+                                placeholder="z.B. 35"
+                                @focus="poolishPercentEditing = true"
+                                @blur="
+                                    poolishPercentEditing = false;
+                                    clampPoolishPercentNow();
+                                "
                             ></Input>
+                            <p class="text-xs text-muted-foreground">
+                                Empfehlung: 35%. Max erlaubt:
+                                {{ poolishPercentCap.toFixed(1) }}%.
+                            </p>
                         </div>
 
                         <Separator />

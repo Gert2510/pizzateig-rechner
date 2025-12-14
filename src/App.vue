@@ -343,12 +343,10 @@ function printSheet() {
             <Card class="print:hidden">
                 <CardHeader>
                     <CardTitle>Poolish</CardTitle>
-                    <CardDescription
-                        >Vorteig</CardDescription
-                    >
+                    <CardDescription>Vorteig </CardDescription>
                 </CardHeader>
                 <CardContent class="space-y-4">
-                    <!-- <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between">
                         <div class="space-y-1">
                             <div class="text-sm font-medium">
                                 Poolish verwenden
@@ -366,7 +364,7 @@ function printSheet() {
                                 ? 'space-y-4'
                                 : 'space-y-4 opacity-50 pointer-events-none'
                         "
-                    > -->
+                    >
                         <div class="space-y-2">
                             <Label>Poolish Hydration</Label>
                             <Select v-model="poolishHydSelect">

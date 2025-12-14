@@ -63,10 +63,10 @@ watch(
 );
 
 // ---------- Inputs ----------
-const ballsText = ref("2");
+const ballsText = ref("4");
 
 const ballWeightOptions = [200, 230, 250, 270, 280, 300, 320, 350];
-const ballWeightG = ref<number>(250);
+const ballWeightG = ref<number>(280);
 
 const hydrationOptions = [55, 58, 60, 62, 65, 68, 70, 72, 75];
 const hydrationPct = ref<number>(65);

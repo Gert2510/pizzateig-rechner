@@ -24,7 +24,22 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-// ---------- helpers (DE: Komma erlaubt) ----------
+const isDark = ref(false);
+
+// beim Start: aus localStorage oder default false
+const saved = localStorage.getItem("theme");
+isDark.value = saved === "dark";
+
+watch(
+    isDark,
+    (v) => {
+        document.documentElement.classList.toggle("dark", v);
+        localStorage.setItem("theme", v ? "dark" : "light");
+    },
+    { immediate: true },
+);
+
+// ------- helpers (DE-kompatibel: Komma als Dezimaltrenner) -------
 function parseNumberDE(raw: string): number | null {
     const s = (raw ?? "").trim().replace(",", ".");
     if (s === "") return null;
@@ -39,37 +54,15 @@ function intOr(raw: string, fallback: number): number {
     if (n === null) return fallback;
     return Math.trunc(n);
 }
-function formatNumberDE(n: number, decimals = 3) {
-    const s = n.toFixed(decimals).replace(/\.?0+$/, "");
-    return s.replace(".", ",");
-}
-function fmt(g: number) {
-    return `${g.toFixed(1)} g`;
-}
 
-// ---------- Theme (Light/Dark) ----------
-const savedTheme = localStorage.getItem("theme");
-const prefersDark =
-    window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-const isDark = ref(savedTheme ? savedTheme === "dark" : prefersDark);
-
-watch(
-    isDark,
-    (v) => {
-        document.documentElement.classList.toggle("dark", v);
-        localStorage.setItem("theme", v ? "dark" : "light");
-    },
-    { immediate: true },
-);
-
-// ---------- Inputs (Strings, damit tippen funktioniert) ----------
-const ballsText = ref("2");
+// ------- state (Inputs als Strings, damit Tippen nicht “blockiert”) -------
+const ballsText = ref("8");
 
 const ballWeightOptions = [200, 230, 250, 270, 280, 300, 320, 350];
-const ballWeightG = ref<number>(250);
+const ballWeightG = ref<number>(280);
 
 const hydrationOptions = [55, 58, 60, 62, 65, 68, 70, 72, 75];
-const hydrationPct = ref<number>(65);
+const hydrationPct = ref<number>(68);
 
 // Poolish
 const usePoolish = ref<boolean>(true);
@@ -80,28 +73,9 @@ const poolishFlourFixedText = ref("300");
 const poolishHydrationPct = ref<number>(100);
 
 // Germ nur im Poolish (Gramm)
-const poolishYeastText = ref("0,3");
+const poolishYeastText = ref("5");
 
-// Trocken vs Frisch
-const freshYeast = ref(false); // false = Trocken, true = Frisch
-const YEAST_CONV = 3; // 1g trocken ~ 3g frisch
-
-watch(
-    freshYeast,
-    (isFresh, wasFresh) => {
-        if (isFresh === wasFresh) return;
-        const current = parseNumberDE(poolishYeastText.value) ?? 0;
-        const converted = isFresh ? current * YEAST_CONV : current / YEAST_CONV;
-        poolishYeastText.value = formatNumberDE(converted, 3);
-    },
-    { immediate: false },
-);
-
-const yeastKindLabel = computed(() =>
-    freshYeast.value ? "Frischgerm" : "Trockengerm",
-);
-
-// ---------- Parsed Werte für Berechnung ----------
+// ------- parsed values for calculations -------
 const ballsN = computed(() => {
     const v = intOr(ballsText.value, 2);
     return Math.min(100, Math.max(1, v));
@@ -148,27 +122,24 @@ const result = computed(() =>
     }),
 );
 
-function setPoolishPreset(flour: number) {
-    usePoolish.value = true;
-    poolishMode.value = "fixed";
-    poolishHydrationPct.value = 100;
-    poolishFlourFixedText.value = String(flour);
+function fmt(g: number) {
+    return `${g.toFixed(1)} g`;
 }
 
-// ---------- Küchenzettel Text ----------
-const recipeText = computed(() => {
+const summaryText = computed(() => {
     const r = result.value;
 
     const poolishBlock = r.poolish
         ? `POOLISH (${r.poolish.hydrationPct}%)
-- Wasser: ${fmt(r.poolish.waterG)}
-- Germ:   ${fmt(r.poolish.yeastG)} (${yeastKindLabel.value})
-- Honig:  ${fmt(r.poolish.honeyG)}
-- Mehl:   ${fmt(r.poolish.flourG)}
-${r.poolish.note ? `Hinweis: ${r.poolish.note}\n` : ""}`
+    - Mehl:   ${fmt(r.poolish.flourG)}
+    - Wasser: ${fmt(r.poolish.waterG)}
+    - Honig:  ${fmt(r.poolish.honeyG)}
+    - Germ:   ${fmt(r.poolish.yeastG)}
+    ${r.poolish.note ? `Hinweis: ${r.poolish.note}\n` : ""}`
         : `POOLISH: aus\n`;
 
-    return `PIZZATEIG REZEPT (Küchenzettel)
+    return `PIZZATEIG REZEPT (printable)
+
 Teiglinge: ${ballsN.value} × ${ballWeightG.value} g = ${fmt(r.totalDoughG)}
 Hydration: ${hydrationPct.value}%
 ${r.saltRule}
@@ -180,73 +151,25 @@ GESAMT
 
 ${poolishBlock}
 FINAL
-- Rest-Wasser: ${fmt(r.finalMix.waterG)}
 - Rest-Mehl:   ${fmt(r.finalMix.flourG)}
+- Rest-Wasser: ${fmt(r.finalMix.waterG)}
 - Salz:        ${fmt(r.finalMix.saltG)}
 ${r.finalMix.note ? `Hinweis: ${r.finalMix.note}\n` : ""}`.trim();
 });
 
-const instructionsText = computed(() => {
-    const r = result.value;
-    const poolish = r.poolish;
-
-    const poolishLine = poolish
-        ? `Poolish anrühren:
-1) ${fmt(poolish.waterG)} Wasser
-2) ${fmt(poolish.yeastG)} ${yeastKindLabel.value} darin auflösen
-3) ${fmt(poolish.honeyG)} Honig einrühren
-4) ${fmt(poolish.flourG)} Mehl dazu, umrühren
-5) Zudecken (Frischhaltefolie), oben mit einer Gabel ein paar kleine Löcher rein
-6) Mindestens 16 Stunden in den Kühlschrank`
-        : `Poolish ist ausgeschaltet.`;
-
-    return `ANLEITUNG
-${poolishLine}
-
-Nächster Tag / Hauptteig:
-1) Poolish in die Küchenmaschine
-2) ${fmt(r.finalMix.waterG)} Wasser dazu
-3) ${fmt(r.finalMix.flourG)} Mehl dazu
-4) Dann ${fmt(r.finalMix.saltG)} Salz dazu
-5) Verrühren/kneten bis ein glatter Teig entsteht
-
-Formen & Gehen:
-1) Teig falten, kurz formen
-2) 15 Minuten rasten lassen
-3) Nochmal zu einer schönen Kugel formen
-4) 1 Stunde zugedeckt rasten lassen
-5) Portionieren: ${ballsN.value} Teiglinge à ${ballWeightG.value} g
-6) In eine Teigbox geben und mindestens 2 Stunden zugedeckt gehen lassen
-
-Dann viel Spaß beim Pizza machen!`;
-});
-
-const toppingsText = computed(() => {
-    return `NEAPOLITANISCHE ZUTATEN (klassisch)
-Tomatensoße:
-- Ganze Tomaten
-- Salz
-- Olivenöl
-- Basilikum
-
-Belag:
-- Parmesan
-- Mozzarella
-  (Tipp: gut abtropfen lassen, erst in Scheiben, dann Streifen, dann Stücke schneiden)
-- Basilikum
-- Ein bissl Olivenöl`;
-});
-
-const fullSheetText = computed(() => {
-    return `${recipeText.value}\n\n${instructionsText.value}\n\n${toppingsText.value}`.trim();
-});
-
 async function copyToClipboard() {
-    await navigator.clipboard.writeText(fullSheetText.value);
+    await navigator.clipboard.writeText(summaryText.value);
 }
 
 function printSheet() {
     window.print();
+}
+
+function setPoolishPreset(flour: number) {
+    usePoolish.value = true;
+    poolishMode.value = "fixed";
+    poolishHydrationPct.value = 100;
+    poolishFlourFixedText.value = String(flour);
 }
 </script>
 
@@ -257,8 +180,7 @@ function printSheet() {
                 <div>
                     <h1 class="text-2xl font-semibold">Pizzateig Rechner</h1>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Salz fix (45 g / 1000 ml Wasser). Poolish: Honig fix 5
-                        g. Germ nur im Poolish.
+                        Make the perfect pizza dough.
                     </p>
                 </div>
 
@@ -288,6 +210,9 @@ function printSheet() {
                             inputmode="numeric"
                             placeholder="z.B. 2"
                         ></Input>
+                        <p class="text-xs text-muted-foreground">
+                            Tipp: einfach eintippen (keine Pfeile nötig).
+                        </p>
                     </div>
 
                     <div class="space-y-2">
@@ -345,7 +270,7 @@ function printSheet() {
                 <CardHeader>
                     <CardTitle>Poolish</CardTitle>
                     <CardDescription
-                        >Optionaler Vorteig (Honig fix 5 g)</CardDescription
+                        >Optionaler Vorteig (z.B. 300/300)</CardDescription
                     >
                 </CardHeader>
                 <CardContent class="space-y-4">
@@ -450,25 +375,6 @@ function printSheet() {
 
                         <Separator />
 
-                        <div class="flex items-center justify-between">
-                            <div class="space-y-1">
-                                <div class="text-sm font-medium">Germ-Art</div>
-                                <div class="text-xs text-muted-foreground">
-                                    Trocken ↔ Frisch (Umrechnung 1:3)
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-muted-foreground"
-                                    >Trocken</span
-                                >
-                                <Switch v-model:checked="freshYeast" />
-                                <span class="text-xs text-muted-foreground"
-                                    >Frisch</span
-                                >
-                            </div>
-                        </div>
-
                         <div class="space-y-2">
                             <Label>Germ im Poolish (g)</Label>
                             <Input
@@ -478,8 +384,8 @@ function printSheet() {
                                 placeholder="z.B. 0,3"
                             ></Input>
                             <p class="text-xs text-muted-foreground">
-                                Wird nur im Poolish verwendet. Beim Umschalten
-                                wird automatisch umgerechnet.
+                                Germ wird nur im Poolish gerechnet. Komma geht
+                                auch (z.B. 0,3).
                             </p>
                         </div>
                     </div>
@@ -494,13 +400,12 @@ function printSheet() {
                         >Kopieren oder drucken</CardDescription
                     >
                 </CardHeader>
-
                 <CardContent class="space-y-3">
                     <div
                         id="print-area"
                         class="whitespace-pre-wrap rounded-md border bg-muted p-4 font-mono text-sm print:border-0 print:bg-transparent print:p-0"
                     >
-                        {{ fullSheetText }}
+                        {{ summaryText }}
                     </div>
 
                     <div class="flex gap-2 print:hidden">

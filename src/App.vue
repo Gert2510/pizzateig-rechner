@@ -63,10 +63,10 @@ watch(
 );
 
 // ---------- Inputs ----------
-const ballsText = ref("4");
+const ballsText = ref("2");
 
 const ballWeightOptions = [200, 230, 250, 270, 280, 300, 320, 350];
-const ballWeightG = ref<number>(280);
+const ballWeightG = ref<number>(250);
 
 const hydrationOptions = [55, 58, 60, 62, 65, 68, 70, 72, 75];
 const hydrationPct = ref<number>(65);
@@ -345,7 +345,6 @@ ${r.poolish.note ? `Hinweis: ${r.poolish.note}\n` : ""}`
         : `POOLISH: aus\n`;
 
     return `PIZZATEIG REZEPT (Küchenzettel)
-
 Teiglinge: ${ballsN.value} × ${ballWeightG.value} g = ${fmt(r.totalDoughG)}
 Hydration: ${hydrationPct.value}%
 ${r.saltRule}
@@ -395,7 +394,7 @@ FORMEN/GEHEN:
 });
 
 const toppingsText = computed(() => {
-    return `Zutaten Pizza Margherita
+    return `NEAPOLITANISCH (klassisch)
 Sauce: ganze Tomaten + Salz + Olivenöl + Basilikum
 Belag: Parmesan + Mozzarella (abtropfen, schneiden) + Basilikum + Olivenöl`;
 });

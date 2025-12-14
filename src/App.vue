@@ -348,7 +348,25 @@ function printSheet() {
                     >
                 </CardHeader>
                 <CardContent class="space-y-4">
+                    <!-- <div class="flex items-center justify-between">
+                        <div class="space-y-1">
+                            <div class="text-sm font-medium">
+                                Poolish verwenden
+                            </div>
+                            <div class="text-xs text-muted-foreground">
+                                An/aus
+                            </div>
+                        </div>
+                        <Switch v-model:checked="usePoolish" />
+                    </div>
 
+                    <div
+                        :class="
+                            usePoolish
+                                ? 'space-y-4'
+                                : 'space-y-4 opacity-50 pointer-events-none'
+                        "
+                    > -->
                         <div class="space-y-2">
                             <Label>Poolish Hydration</Label>
                             <Select v-model="poolishHydSelect">

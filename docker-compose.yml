@@ -3,5 +3,5 @@ services:
     build: .
     container_name: pizzapp
     ports:
-      - "8089:80"
+      - "8063:80"
     restart: unless-stopped

@@ -1,12 +1,43 @@
 <!doctype html>
 <html lang="de">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Pizzateig Rechner</title>
-    </head>
-    <body>
-        <div id="app"></div>
-        <script type="module" src="/src/main.ts"></script>
-    </body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Rechner für neapolitanischen Pizzateig: Teiglinge, Hydration, Poolish, Salz und Germ – inklusive Küchenzettel zum Drucken."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0a0a0b"
+      media="(prefers-color-scheme: dark)"
+    />
+    <title>Pizzateig Rechner</title>
+    <script>
+      // Theme vor dem ersten Paint setzen, damit nichts aufblitzt.
+      // Key/Werte müssen zu src/composables/useTheme.ts passen.
+      (() => {
+        try {
+          const saved = localStorage.getItem("theme");
+          const dark =
+            saved === "dark" ||
+            (saved !== "light" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", dark);
+        } catch {
+          /* localStorage gesperrt – Standard-Theme genügt */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
